@@ -1,19 +1,29 @@
 ################################################################################
-## plot_benchmark_v2.R -- figures including the fifth method SMCS-w-est
-## (estimated, epoch-corrected variances). Reads the v2 bench_*.rds files.
+## ch1_benchmark_plot.R -- Figures 1.2 and 1.3
+##
+## Figures including the fifth method SMCS-w-est (estimated, epoch-corrected
+## variances). Reads the results/bench_*.rds files written by ch1_benchmark.R,
+## which must be run for every combination of scenario, rho and null first.
+##
+## Usage:  Rscript R/ch1_benchmark_plot.R
+## Output: figures/benchmark_setsize.pdf, figures/benchmark_type1.pdf
 ################################################################################
 rhos  <- c(0, 0.4, 0.8); scens <- c("a", "b", "c")
 lab   <- c(a = "(a) dense near-ties", b = "(b) graded competitors",
            c = "(c) small gap, far mass")
 meths <- c("SMCS-w (known var)", "SMCS-w-est", "DA-plug", "DA-adj", "Bonferroni")
 cols  <- c("#c0392b", "#e67e22", "#2471a3", "#7fb3d5", "#7d8a2e")
+
 fname <- function(scen, nul, rho)
   sprintf("bench_%s%d_rho%s.rds", scen, nul, gsub("-", "m", sprintf("%.1f", rho)))
-grab <- function(scen, nul, rho){
-  f <- fname(scen, nul, rho); if (!file.exists(f)){ warning("missing ", f); return(NULL) }
-  readRDS(f) }
 
-pdf("benchmark_setsize.pdf", width = 10.5, height = 3.8)
+grab <- function(scen, nul, rho){
+  f <- file.path("results", fname(scen, nul, rho))
+  if (!file.exists(f)){ warning("missing ", f); return(NULL) }
+  readRDS(f)
+}
+
+pdf("figures/benchmark_setsize.pdf", width = 10.5, height = 3.8)
 par(mfrow = c(1, 3), mar = c(4.2, 4.2, 2.6, 0.8))
 for (sc in scens){
   M <- matrix(NA, 5, length(rhos))
@@ -27,14 +37,14 @@ for (sc in scens){
        xlab = expression(rho[loss]), ylab = "average set size at t = 2n",
        main = lab[sc], xaxt = "n")
   axis(1, at = rhos)
-  for (m in 1:5){ lines(rhos, M[m, ], col = cols[m], lwd = 2)
-                  points(rhos, M[m, ], col = cols[m], pch = 16, cex = 1.2) }
+  for (k in 1:5){ lines(rhos, M[k, ], col = cols[k], lwd = 2)
+                  points(rhos, M[k, ], col = cols[k], pch = 16, cex = 1.2) }
   if (sc == "a") legend("bottomleft", meths, col = cols, lwd = 2, pch = 16,
                         bty = "n", cex = .85)
 }
 dev.off()
 
-pdf("benchmark_type1.pdf", width = 12.5, height = 4.0)
+pdf("figures/benchmark_type1.pdf", width = 12.5, height = 4.0)
 par(mfrow = c(1, 3), mar = c(4.6, 4.2, 2.6, 0.8))
 bcols <- c("#aed6f1", "#2471a3", "#d6dbdf", "#5d6d7e", "#d5e8a8", "#7d8a2e",
            "#c0392b", "#e67e22")
@@ -57,4 +67,4 @@ for (sc in scens){
   if (sc == "a") legend("topleft", bnames, fill = bcols, bty = "n", cex = .75)
 }
 dev.off()
-cat("wrote benchmark_setsize.pdf and benchmark_type1.pdf (v2, five methods)\n")
+cat("wrote figures/benchmark_setsize.pdf and figures/benchmark_type1.pdf\n")

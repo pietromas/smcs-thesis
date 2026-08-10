@@ -1,16 +1,21 @@
 ################################################################################
-## covid_case_study_v2.R -- robust version. Same four strategies, but with a
-## proper evaluation-window selection for the messy Hub data, plus diagnostics
-## printed at every stage so problems are visible.
+## ch1_covid.R -- Figure 1.4
+##
+## Covid-19 Forecast Hub case study. Same four strategies as the simulation
+## study, with a proper evaluation-window selection for the messy Hub data,
+## plus diagnostics printed at every stage so problems are visible.
 ##
 ## Window selection: find the longest CONTIGUOUS run of weekly dates on which
 ## at least `mmin` models all have forecasts, then keep exactly the models that
 ## are complete on that window.
 ##
-## Usage:  Rscript covid_case_study_v2.R [quantile] [alpha] [mmin]
+## Data: expects data/forecasts_death.rda and data/truth.rda. These are derived
+## from the public Covid-19 Forecast Hub and are not redistributed here; see
+## R/load_covid_data.R for how to obtain and build them.
+##
+## Usage:  Rscript R/ch1_covid.R [quantile] [alpha] [mmin]
 ##         defaults: quantile = 0.5, alpha = 0.1, mmin = 15
 ################################################################################
-
 args  <- commandArgs(trailingOnly = TRUE)
 qv    <- if (length(args) >= 1) as.numeric(args[1]) else 0.5
 alpha <- if (length(args) >= 2) as.numeric(args[2]) else 0.1
@@ -18,7 +23,7 @@ mmin  <- if (length(args) >= 3) as.integer(args[3]) else 15
 eta0  <- 1
 eps   <- 1e-6
 
-load("forecasts_death.rda"); load("truth.rda")
+load("data/forecasts_death.rda"); load("data/truth.rda")
 
 fd <- as.data.frame(forecasts_death)
 cat(sprintf("raw forecasts: %d rows, %d models, quantile column class = %s\n",
@@ -58,6 +63,7 @@ r <- rle(ok); ends <- cumsum(r$lengths); starts <- ends - r$lengths + 1
 runs <- which(r$values)
 best <- runs[which.max(r$lengths[runs])]
 win  <- starts[best]:ends[best]
+
 ## models with >= 90% coverage on the window; small gaps filled by carrying the
 ## last submitted forecast forward (predictable, so validity is unaffected)
 covw <- rowMeans(!is.na(Fm[, win, drop = FALSE]))
@@ -74,6 +80,7 @@ for (i in seq_len(nrow(Fm))){
 }
 cat(sprintf("imputed %d missing forecasts (%.1f%%) by carrying the last forecast forward\n",
             nimp, 100 * nimp / length(Fm)))
+
 dates <- as.Date(colnames(Fm))
 y     <- tr$value[match(dates, tr$target_end_date)]
 m <- nrow(Fm); Tn <- ncol(Fm)
@@ -145,8 +152,13 @@ for (nm in names(res)){
 cat("\nmodels in the final set (softmax + aGRAPA):\n  ",
     paste(rownames(Fm)[!sa$excl], collapse = ", "), "\n")
 
+saveRDS(list(res = res, dates = dates, models = rownames(Fm),
+             m = m, Tn = Tn, qv = qv, alpha = alpha, mmin = mmin,
+             n_imputed = nimp, share_imputed = nimp / length(Fm)),
+        "results/covid_case_study.rds")
+
 cols <- c("#7d8a2e", "#2471a3", "#c0392b", "#e67e22")
-pdf("covid_setsize.pdf", width = 8.5, height = 5)
+pdf("figures/covid_setsize.pdf", width = 8.5, height = 5)
 plot(dates, st$size, type = "s", lwd = 2, col = cols[1], ylim = c(0, m + 1),
      xlab = "target end date", ylab = "size of the confidence set",
      main = sprintf("Covid-19 Forecast Hub, 1 wk ahead inc death (q = %.2f, alpha = %.2f)",
@@ -156,4 +168,4 @@ lines(dates, sa$size, type = "s", lwd = 2, col = cols[3])
 lines(dates, pa$size, type = "s", lwd = 2, col = cols[4])
 legend("bottomleft", names(res), col = cols, lwd = 2, bty = "n")
 dev.off()
-cat("\nwrote covid_setsize.pdf\n")
+cat("\nwrote figures/covid_setsize.pdf and results/covid_case_study.rds\n")

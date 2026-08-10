@@ -1,0 +1,7 @@
+
+*.rda
+
+*.csv
+
+!.gitignore
+

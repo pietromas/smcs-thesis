@@ -1,22 +1,26 @@
 ################################################################################
-## benchmark_ch1_v2.R -- as benchmark_ch1.R, plus a FIFTH method:
+## ch1_benchmark.R -- data for Figures 1.2 and 1.3
 ##
-##   SMCS-w-est : the same adaptively weighted SMCS with aGRAPA fractions, but
-##   with the penalty variance ESTIMATED from the data and corrected by the
-##   one-dimensional epoch construction of Chapter 2. Per pair (i,k), the
-##   penalty variance is the sample variance frozen on the doubling epoch grid
-##   t_j = 8, 16, ..., inflated by the exact lower quantile of chisq(nu)/nu at
-##   eps = delta/(K*(d-1)) per event, with delta = 0.05, so each model's
-##   anytime guarantee is alpha + delta. No oracle ingredient at all.
+## Benchmark against discrete argmin inference, five methods:
 ##
-## Same seeds as benchmark_ch1.R, so SMCS-w / DA / Bonferroni reproduce exactly.
-## Usage:   Rscript benchmark_ch1_v2.R <scen: a|b|c> <rho> <null: 0|1> <nsims>
-## Output:  bench_<scen><null>_rho<rho>.rds (v2, includes smcs2_*) + summary line
+##   SMCS-w     : adaptively weighted SMCS, known penalty variance
+##   SMCS-w-est : the same, but with the penalty variance ESTIMATED from the
+##                data and corrected by the one-dimensional epoch construction
+##                of Chapter 2. Per pair (i,k), the penalty variance is the
+##                sample variance frozen on the doubling epoch grid
+##                t_j = 8, 16, ..., inflated by the exact lower quantile of
+##                chisq(nu)/nu at eps = delta/(K*(d-1)) per event, with
+##                delta = 0.05, so each model's anytime guarantee is
+##                alpha + delta. No oracle ingredient at all.
+##   DA-plug, DA-adj : the two dimension-agnostic argmin tests
+##   Bonferroni : one-sided t-test with Bonferroni correction
+##
+## Usage:   Rscript R/ch1_benchmark.R <scen: a|b|c> <rho> <null: 0|1> <nsims>
+## Output:  results/bench_<scen><null>_rho<rho>.rds and a summary line
 ################################################################################
-
 args <- commandArgs(trailingOnly = TRUE)
 if (length(args) < 4)
-  stop("Usage: Rscript benchmark_ch1_v2.R <scen a|b|c> <rho> <null 0|1> <nsims>")
+  stop("Usage: Rscript R/ch1_benchmark.R <scen a|b|c> <rho> <null 0|1> <nsims>")
 scen  <- args[1]; rho <- as.numeric(args[2])
 isnull <- as.integer(args[3]) == 1L; ns <- as.integer(args[4])
 if (!scen %in% c("a","b","c")) stop("scen must be a, b or c")
@@ -109,6 +113,7 @@ da_test <- function(X, t, r, adj){
   w  <- X1[, r] - X1[, s]
   sqrt(m) * mean(w) > qnorm(1 - alpha) * sd(w)
 }
+
 bonf_test <- function(X, t, r){
   Xt <- X[1:t, , drop = FALSE]
   Dif <- Xt[, r] - Xt
@@ -150,8 +155,8 @@ for (s in 1:ns){
 meta <- list(scen = scen, rho = rho, isnull = isnull, ns = ns, d = d, nTot = nTot,
              alpha = alpha, grid = grid, eta0 = eta0, delta = delta, tks = tks)
 saveRDS(list(meta = meta, res = res),
-        sprintf("bench_%s%d_rho%s.rds", scen, isnull, gsub("-", "m", sprintf("%.1f", rho))))
-
+        sprintf("results/bench_%s%d_rho%s.rds", scen, isnull,
+                gsub("-", "m", sprintf("%.1f", rho))))
 cat(sprintf(
  "%s%s rho=%+.1f ns=%d | setsize SMCS/SMCSest/DAp/DAa/Bon = %.1f/%.1f/%.1f/%.1f/%.1f | rej1 ANY SMCS/SMCSest = %.3f/%.3f | rej1 fix DAp/DAa/Bon = %.3f/%.3f/%.3f | rej1 ANY DAp/DAa/Bon = %.3f/%.3f/%.3f\n",
  scen, ifelse(isnull, "0(null)", "(alt)"), rho, ns,

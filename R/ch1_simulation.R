@@ -1,7 +1,19 @@
+################################################################################
+## ch1_simulation.R -- Figure 1.1
+##
+## Average size of the sequential model confidence set over time in the
+## Gaussian random-walk design, m = 49 forecasters. Compares the symmetric
+## average with the four combinations of softmax weight parameter (fixed or
+## adaptive) and betting fraction (fixed or aGRAPA).
+##
+## Usage:  Rscript R/ch1_simulation.R
+## Output: figures/ch1_setsize.pdf, results/ch1_avg_size.rds
+################################################################################
+
 # 1. CLEAN UP
 try(future::plan(sequential), silent = TRUE)
 closeAllConnections()
-gc() 
+gc()
 
 # 2. Load core packages
 library(scoringRules)
@@ -23,7 +35,7 @@ for (i in 1:m){
     tmp <- if (params$delta[i] != params$delta[j]) {
       ((params$epsilon[i])*sqrt(1+params$delta[j])-(params$epsilon[j])*sqrt(1+params$delta[i]))/(sqrt(1+params$delta[j])-sqrt(1+params$delta[i]))
     } else { numeric(0) }
-    c_mat[i,j] <- max(abs(crps_norm(c(high,-high,tmp),params$epsilon[i],sqrt(1+params$delta[i])) - 
+    c_mat[i,j] <- max(abs(crps_norm(c(high,-high,tmp),params$epsilon[i],sqrt(1+params$delta[i])) -
                             crps_norm(c(high,-high,tmp),params$epsilon[j],sqrt(1+params$delta[j]))))
   }
 }
@@ -42,7 +54,7 @@ run_sim_fast <- function(sim_id) {
   for (i in 1:m){ L[, i] <- crps_norm(y, mean = means + params$epsilon[i], sd = sqrt(1 + params$delta[i])) }
   d <- array(0, c(m, m, n))
   for (i in 1:m) { for (j in (1:m)[-i]) { d[i, j, ] <- L[, i] - L[, j] } }
-  
+
   E_std <- array(1, c(m, m, n)); E_kel <- array(1, c(m, m, n))
   cd <- matrix(0, m, m); cv <- matrix(0, m, m)
   for (t in 1:n) {
@@ -55,7 +67,7 @@ run_sim_fast <- function(sim_id) {
       }
     }
   }
-  
+
   EE <- list(Sym=matrix(0,m,n), FF=matrix(0,m,n), AF=matrix(0,m,n), FK=matrix(0,m,n), Full=matrix(0,m,n))
   cda <- matrix(0, m, m); cva <- matrix(0, m, m)
   for(t in 1:n){
@@ -67,19 +79,19 @@ run_sim_fast <- function(sim_id) {
         # Adaptive Eta: 1 / sum_{j != i} Var(d_i,j, 0:t-1)
         emp_vars = (cva[i, others] / t_prev) - (cda[i, others] / t_prev)^2
         eta_t = eta_base / (0.01 + sum(pmax(emp_vars, 0)))
-        
+
         # Fixed Eta weights (e.g., eta=5)
         w_f <- exp(5*cda[i,others]-max(5*cda[i,others])); w_f <- w_f/sum(w_f)
         # Adaptive Eta weights
         w_a <- exp(eta_t*cda[i,others]-max(eta_t*cda[i,others])); w_a <- w_a/sum(w_a)
-        
+
         EE$FF[i,t]=sum(w_f*E_std[i,others,t]); EE$AF[i,t]=sum(w_a*E_std[i,others,t])
         EE$FK[i,t]=sum(w_f*E_kel[i,others,t]); EE$Full[i,t]=sum(w_a*E_kel[i,others,t])
       } else { EE$FF[i,1]=EE$AF[i,1]=EE$FK[i,1]=EE$Full[i,1]=EE$Sym[i,1] }
     }
     cda=cda+d[,,t]; cva=cva+d[,,t]^2
   }
-  
+
   res <- matrix(0, 5, n)
   for(k in 1:5){
     curr <- 1:m; dat <- EE[[k]]
@@ -96,10 +108,12 @@ results <- future_lapply(1:n_sims, run_sim_fast, future.seed = TRUE)
 
 # 8. Aggregate and Plot
 avg_size <- Reduce("+", results) / n_sims
-plot_df <- data.frame(t=rep(1:n, 5), Size=as.vector(t(avg_size)), 
-                      Strategy=rep(c("Symmetric", "FixEta/FixLam", "AdaEta/FixLam", "FixEta/aGRAPALam", "AdaEta/aGRAPALam"), each=n))
+saveRDS(avg_size, "results/ch1_avg_size.rds")
 
-ggplot(plot_df, aes(x=t, y=Size, color=Strategy)) + 
+plot_df <- data.frame(t=rep(1:n, 5), Size=as.vector(t(avg_size)),
+                      Strategy=rep(c("Symmetric", "FixEta/FixLam", "AdaEta/FixLam", "FixEta/aGRAPALam", "AdaEta/aGRAPALam"), each=n))
+p <- ggplot(plot_df, aes(x=t, y=Size, color=Strategy)) +
   geom_line(linewidth=1) + theme_bw() +
   scale_color_manual(values=c("gray", "red", "royalblue", "darkgreen", "purple"))
-
+ggsave("figures/ch1_setsize.pdf", p, width = 8, height = 5)
+cat("wrote figures/ch1_setsize.pdf and results/ch1_avg_size.rds\n")
