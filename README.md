@@ -1,4 +1,4 @@
-# Sequential Model Confidence Sets: adaptive weights and multivariate betting
+# Sequential model confidence sets and new horizons
 
 Code to reproduce the simulation studies and figures of the MSc thesis
 *Sequential Model Confidence Sets and New Horizons*, ETH Zurich.
