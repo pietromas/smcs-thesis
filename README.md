@@ -1,7 +1,7 @@
 # Sequential model confidence sets and new horizons
 
 Code to reproduce the simulation studies and figures of the MSc thesis
-*Sequential Model Confidence Sets and New Horizons*, ETH Zurich.
+*Sequential model confidence sets and new horizons*, ETH Zurich.
 
 ## Requirements
 
