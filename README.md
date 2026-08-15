@@ -29,6 +29,7 @@ header of `R/load_covid_data.R`.
 | `R/ch2_theory_check.R` | Table 2.4 |
 | `R/ch2_gauss_highdim.R` | Tables 2.6 to 2.8 |
 | `R/ch2_gauss_highdim_plot.R` | Figure 2.3 |
+| `R/ch2_covid_mv.R` | Figure 2.4 |
 
 ## Running
 
